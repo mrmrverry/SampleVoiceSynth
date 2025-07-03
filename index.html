@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Sample Break Voice</title>
+  <style>
+    body {
+      background: #0f0f0f;
+      color: #00ff99;
+      font-family: monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 50px;
+    }
+    h1 {
+      font-size: 32px;
+      margin-bottom: 10px;
+      text-shadow: 0 0 10px #00ff99;
+    }
+    input {
+      font-size: 20px;
+      padding: 10px;
+      background: black;
+      color: lime;
+      border: 2px solid #00ff99;
+      width: 300px;
+      text-align: center;
+    }
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 18px;
+      background: #111;
+      color: #00ff99;
+      border: 2px solid #00ff99;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    button:hover {
+      background: #00ff99;
+      color: #111;
+    }
+    .status {
+      margin-top: 20px;
+      font-size: 16px;
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>💀 Sample Voice Synth 💀</h1>
+
+  <input type="text" id="wordInput" placeholder="введи слово">
+
+  <button id="playBtn">🎧 ПРОИГРАТЬ</button>
+
+  <div class="status" id="status">Жду ввода...</div>
+
+  <script>
+    const sampleFolders = ['voice_1/', 'voice_2/'];
+
+    async function loadSample(folder, char) {
+      const url = `${folder}${char}.wav`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`Не найден сэмпл ${char} в ${folder}`);
+      return await response.arrayBuffer();
+    }
+
+    async function playWord(word) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AudioContext();
+      const buffers = [];
+      const status = document.getElementById('status');
+
+      for (const char of word.toLowerCase()) {
+        if (!/[a-zа-яё]/.test(char)) continue;
+        const folder = sampleFolders[Math.floor(Math.random() * sampleFolders.length)];
+        try {
+          const buffer = await loadSample(folder, char);
+          const decoded = await ctx.decodeAudioData(buffer);
+          buffers.push(decoded);
+        } catch (e) {
+          console.warn(e.message);
+        }
+      }
+
+      if (!buffers.length) {
+        status.textContent = 'Нет подходящих сэмплов.';
+        return;
+      }
+
+      status.textContent = '🔥 Воспроизвожу...';
+
+      let t = ctx.currentTime;
+      for (const buf of buffers) {
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        src.connect(ctx.destination);
+        src.start(t);
+        t += buf.duration;
+      }
+
+      setTimeout(() => {
+        status.textContent = 'Готов.';
+      }, t * 1000);
+    }
+
+    document.getElementById('playBtn').onclick = () => {
+      const word = document.getElementById('wordInput').value.trim();
+      if (word) playWord(word);
+    };
+  </script>
+</body>
+</html>
